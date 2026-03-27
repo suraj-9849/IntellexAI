@@ -1,12 +1,6 @@
 'use server';
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const API_KEY = process.env.GOOGLE_API_KEY_2;
-if (!API_KEY) {
-  throw new Error('GOOGLE_API_KEY environment variable is not set');
-}
-const genAI = new GoogleGenerativeAI(API_KEY);
+import { callHostedVisionModel, parseJsonFromText } from '@/lib/hosted-model';
 
 export interface VideoEvent {
   isDangerous: boolean;
@@ -22,21 +16,6 @@ export async function detectEvents(
     if (!base64Image) {
       throw new Error('No image data provided');
     }
-
-    const base64Data = base64Image.split(',')[1];
-    if (!base64Data) {
-      throw new Error('Invalid image data format');
-    }
-
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    console.log('Initialized Gemini model');
-
-    const imagePart = {
-      inlineData: {
-        data: base64Data,
-        mimeType: 'image/jpeg',
-      },
-    };
 
     const prompt = `Carefully analyze this image frame based on the following investigation prompt: "${investigationPrompt}".
 
@@ -59,36 +38,27 @@ Return a JSON object in this exact format:
 
 If no relevant observations are found, return an empty events array.`;
 
+    // Only send the image and prompt to the hosted model API
     try {
-      const result = await model.generateContent([prompt, imagePart]);
-      const response = await result.response;
-      const text = response.text();
+      const { text } = await callHostedVisionModel({
+        base64Image,
+        prompt: `${prompt}\n\nImportant:\n- Return ONLY raw JSON.\n- Do not include markdown, code fences, or any explanation text.`,
+      });
       console.log('Raw API Response:', text);
 
-      // Try to extract JSON from the response
-      let jsonStr = text;
-      const codeBlockMatch = text.match(/```(?:json)?\s*({[\s\S]*?})\s*```/);
-      if (codeBlockMatch) {
-        jsonStr = codeBlockMatch[1];
-      } else {
-        const jsonMatch = text.match(/\{[^]*\}/);
-        if (jsonMatch) {
-          jsonStr = jsonMatch[0];
-        }
-      }
-
-      try {
-        const parsed = JSON.parse(jsonStr);
-        return {
-          events: parsed.events || [],
-          rawResponse: text,
-        };
-      } catch (parseError) {
-        console.error('Error parsing JSON:', parseError);
+      // Parse the response for events (expects JSON in response text)
+      const parsed = parseJsonFromText<{ events?: VideoEvent[] }>(text);
+      if (!parsed) {
+        console.error('Error parsing JSON from hosted model response');
         return { events: [], rawResponse: text };
       }
+
+      return {
+        events: parsed.events || [],
+        rawResponse: text,
+      };
     } catch (error) {
-      console.error('Error calling API:', error);
+      console.error('Error calling hosted model API:', error);
       throw error;
     }
   } catch (error) {

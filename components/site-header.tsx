@@ -65,132 +65,130 @@ export default function SiteHeader() {
               </div>
             </Link>
 
-            {!loading && user && (
-              <section className={'max-md:hidden'}>
-                <nav className={'flex items-center gap-8 text-sm'}>
-                  <Link
-                    href='/pages/upload'
-                    className={'text-white/70 pl-4 transition hover:text-white'}
-                  >
-                    Upload
-                  </Link>
-                  <Link
-                    href='/pages/realtime-stream'
-                    className={'text-white/70 transition hover:text-white'}
-                  >
-                    Realtime
-                  </Link>
-                  <Link
-                    href='/pages/saved-videos'
-                    className={'text-white/70 transition hover:text-white'}
-                  >
-                    Library
-                  </Link>
-                  <Link
-                    href='/pages/statistics'
-                    className={'text-white/70 transition hover:text-white'}
-                  >
-                    Statistics
-                  </Link>
-                  <Link
-                    href='/pages/video-analyser'
-                    className={'text-white/70 transition hover:text-white'}
-                  >
-                    TrackX
-                  </Link>
-                  <Link
-                    href='/pages/investigation'
-                    className={'text-white/70 transition pr-4 hover:text-white'}
-                  >
-                    Investigation
-                  </Link>
-                </nav>
-              </section>
-            )}
+            {/* Always show navbar links for development/demo */}
+            <section className={'max-md:hidden'}>
+              <nav className={'flex items-center gap-8 text-sm'}>
+                <Link
+                  href='/pages/upload'
+                  className={'text-white/70 pl-4 transition hover:text-white'}
+                >
+                  Upload
+                </Link>
+                <Link
+                  href='/pages/realtime-stream'
+                  className={'text-white/70 transition hover:text-white'}
+                >
+                  Realtime
+                </Link>
+                <Link
+                  href='/pages/saved-videos'
+                  className={'text-white/70 transition hover:text-white'}
+                >
+                  Library
+                </Link>
+                <Link
+                  href='/pages/statistics'
+                  className={'text-white/70 transition hover:text-white'}
+                >
+                  Statistics
+                </Link>
+                <Link
+                  href='/pages/video-analyser'
+                  className={'text-white/70 transition hover:text-white'}
+                >
+                  TrackX
+                </Link>
+                <Link
+                  href='/pages/investigation'
+                  className={'text-white/70 transition pr-4 hover:text-white'}
+                >
+                  Investigation
+                </Link>
+              </nav>
+            </section>
 
             <section className={'flex items-center max-md:gap-4'}>
               <div className='flex gap-3'>
                 <AuthNavigation />
               </div>
 
-              {!loading && user && (
-                <Sheet open={isOpen} onOpenChange={setIsOpen}>
-                  <SheetTrigger>
-                    <MenuIcon
+              {/* Always show mobile nav links for development/demo */}
+              <Sheet open={isOpen} onOpenChange={setIsOpen}>
+                <SheetTrigger>
+                  <MenuIcon
+                    className={
+                      'size-9 transition hover:text-white/70 md:hidden'
+                    }
+                  />
+                </SheetTrigger>
+                <SheetContent side={'top'} className={'p-8'}>
+                  <div className={'center inline-flex items-center gap-3'}>
+                    <div
                       className={
-                        'size-9 transition hover:text-white/70 md:hidden'
+                        'inline-flex size-8 items-center justify-center rounded-lg border'
                       }
-                    />
-                  </SheetTrigger>
-                  <SheetContent side={'top'} className={'p-8'}>
-                    <div className={'center inline-flex items-center gap-3'}>
-                      <div
+                    ></div>
+                  </div>
+                  <div className={'mb-4 mt-8'}>
+                    <nav className={'grid items-center gap-4 text-lg'}>
+                      <Link
+                        href='/pages/upload'
                         className={
-                          'inline-flex size-8 items-center justify-center rounded-lg border'
+                          'flex items-center gap-3 text-white/70 transition hover:text-white'
                         }
-                      ></div>
-                    </div>
-                    <div className={'mb-4 mt-8'}>
-                      <nav className={'grid items-center gap-4 text-lg'}>
-                        <Link
-                          href='/pages/upload'
-                          className={
-                            'flex items-center gap-3 text-white/70 transition hover:text-white'
-                          }
-                        >
-                          <Feather className={'size-6'} />
-                          Upload
-                        </Link>
-                        <Link
-                          href='/pages/realtime-stream'
-                          className={
-                            'flex items-center gap-3 text-white/70 transition hover:text-white'
-                          }
-                        >
-                          <CodeXml className={'size-6'} />
-                          Realtime
-                        </Link>
-                        <Link
-                          href='/pages/saved-videos'
-                          className={
-                            'flex items-center gap-3 text-white/70 transition hover:text-white'
-                          }
-                        >
-                          <Wallet2 className={'size-6'} />
-                          Library
-                        </Link>
-                        <Link
-                          href='/pages/statistics'
-                          className={
-                            'flex items-center gap-3 text-white/70 transition hover:text-white'
-                          }
-                        >
-                          <Newspaper className={'size-6'} />
-                          Statistics
-                        </Link>
-                        <Link
-                          href='/pages/video-analyser'
-                          className={
-                            'flex items-center gap-3 text-white/70 transition hover:text-white'
-                          }
-                        >
-                          <Feather className={'size-6'} />
-                          TrackX
-                        </Link>
-                        <Link
-                          href='/pages/investigation'
-                          className={
-                            'flex items-center gap-3 text-white/70 transition hover:text-white'
-                          }
-                        >
-                          <Feather className={'size-6'} />
-                          Investigate
-                        </Link>
-                      </nav>
-                    </div>
-                  </SheetContent>
-                </Sheet>
-              )}
+                      >
+                        <Feather className={'size-6'} />
+                        Upload
+                      </Link>
+                      <Link
+                        href='/pages/realtime-stream'
+                        className={
+                          'flex items-center gap-3 text-white/70 transition hover:text-white'
+                        }
+                      >
+                        <CodeXml className={'size-6'} />
+                        Realtime
+                      </Link>
+                      <Link
+                        href='/pages/saved-videos'
+                        className={
+                          'flex items-center gap-3 text-white/70 transition hover:text-white'
+                        }
+                      >
+                        <Wallet2 className={'size-6'} />
+                        Library
+                      </Link>
+                      <Link
+                        href='/pages/statistics'
+                        className={
+                          'flex items-center gap-3 text-white/70 transition hover:text-white'
+                        }
+                      >
+                        <Newspaper className={'size-6'} />
+                        Statistics
+                      </Link>
+                      <Link
+                        href='/pages/video-analyser'
+                        className={
+                          'flex items-center gap-3 text-white/70 transition hover:text-white'
+                        }
+                      >
+                        <Feather className={'size-6'} />
+                        TrackX
+                      </Link>
+                      <Link
+                        href='/pages/investigation'
+                        className={
+                          'flex items-center gap-3 text-white/70 transition hover:text-white'
+                        }
+                      >
+                        <Feather className={'size-6'} />
+                        Investigate
+                      </Link>
+                    </nav>
+                  </div>
+                </SheetContent>
+              </Sheet>
             </section>
           </div>
         </div>

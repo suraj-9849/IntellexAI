@@ -1,45 +1,11 @@
 'use server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { callHostedVisionModel, parseJsonFromText } from '@/lib/hosted-model';
 
-// Array of API keys
-const API_KEYS = [
-  process.env.GOOGLE_API_KEY_1,
-  process.env.GOOGLE_API_KEY_2,
-  process.env.GOOGLE_API_KEY_3,
-  process.env.GOOGLE_API_KEY_4,
-  process.env.GOOGLE_API_KEY_5,
-  process.env.GOOGLE_API_KEY_6,
-  process.env.GOOGLE_API_KEY_7,
-  process.env.GOOGLE_API_KEY_8,
-  process.env.GOOGLE_API_KEY_9,
-  process.env.GOOGLE_API_KEY_10,
-];
-
-// Counter to keep track of which key was last used (stored in memory)
-let currentKeyIndex = 0;
-
-// Function to get the next API key in rotation
-function getNextApiKey() {
-  // Filter out any undefined or empty keys
-  const validKeys = API_KEYS.filter(key => key);
-  
-  if (validKeys.length === 0) {
-    throw new Error('No valid API keys available');
-  }
-  
-  // Get the current key
-  const key = validKeys[currentKeyIndex];
-  
-  // Update the index for the next call
-  currentKeyIndex = (currentKeyIndex + 1) % validKeys.length;
-  
-  return key;
-}
-
+// The ML model now only returns description and isDangerous
 export interface VideoEvent {
-  isDangerous: boolean;
-  timestamp: string;
   description: string;
+  isDangerous: boolean;
+  timestamp?: string; // Will be added locally
 }
 
 export async function detectEvents(
@@ -51,103 +17,38 @@ export async function detectEvents(
       throw new Error('No image data provided');
     }
     
-    const base64Data = base64Image.split(',')[1];
-    if (!base64Data) {
-      throw new Error('Invalid image data format');
-    }
-    
-    // Get the next API key in the rotation
-    const API_KEY = getNextApiKey();
-    if (!API_KEY) {
-      throw new Error('Failed to retrieve a valid API key');
-    }
-    console.log(`Using API key index: ${currentKeyIndex}`);
-    
-    // Initialize the Gemini API with the selected key
-    const genAI = new GoogleGenerativeAI(API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    console.log('Initialized Gemini model');
-    
-    const imagePart = {
-      inlineData: {
-        data: base64Data,
-        mimeType: 'image/jpeg',
-      },
-    };
-    
-    console.log('Sending image to API...', { imageSize: base64Data.length });
-    
-    const prompt = `Analyze this frame and determine if any of these specific dangerous situations are occurring:
-1. Medical Emergencies:
-- Person unconscious or lying motionless
-- Person clutching chest/showing signs of heart problems
-- Seizures or convulsions
-- Difficulty breathing or choking
-2. Falls and Injuries:
-- Person falling or about to fall
-- Person on the ground after a fall
-- Signs of injury or bleeding
-- Limping or showing signs of physical trauma
-3. Distress Signals:
-- Person calling for help or showing distress
-- Panic attacks or severe anxiety symptoms
-- Signs of fainting or dizziness
-- Headache or unease
-- Signs of unconsciousness
-4. Violence or Threats:
-- Physical altercations
-- Threatening behavior
-- Weapons visible
-5. Suspicious Activities:
-- Shoplifting
-- Vandalism
-- Trespassing
-Return a JSON object in this exact format:
-{
-    "events": [
-        {
-            "timestamp": "mm:ss",
-            "description": "Brief description of what's happening in this frame",
-            "isDangerous": true/false // Set to true if the event involves a fall, injury, unease, pain, accident, or concerning behavior
-        }
-    ]
-}`;
+    const prompt = `You are an expert safety event detector. Only detect and describe truly harmful or dangerous events (such as medical emergencies, violence, weapons, severe injuries, or criminal acts). Ignore and do NOT report simple, silly, or non-harmful events (like eating, playing, or minor messes).\n\nReturn your answer as a JSON object in this exact format:\n{\n  \"description\": \"Brief description of the real harmful event in this frame, or 'No harmful event detected.'\",\n  \"isDangerous\": true/false\n}\nSTRICT RULES:\n- Output ONLY valid JSON, no markdown, no code fences, no explanation, no extra text.\n- If no real harmful event is detected, set description to 'No harmful event detected.' and isDangerous to false.\n- Do NOT include silly, playful, or non-dangerous events.`;
 
+    // Only send the image and prompt to the hosted model API
     try {
-      const result = await model.generateContent([prompt, imagePart]);
-      const response = await result.response;
-      const text = response.text();
+      const { text } = await callHostedVisionModel({
+        base64Image,
+        prompt,
+      });
       console.log('Raw API Response:', text);
-      
-      // Try to extract JSON from the response, handling potential code blocks
-      let jsonStr = text;
-      
-      // First try to extract content from code blocks if present
-      const codeBlockMatch = text.match(/```(?:json)?\s*({[\s\S]*?})\s*```/);
-      if (codeBlockMatch) {
-        jsonStr = codeBlockMatch[1];
-        console.log('Extracted JSON from code block:', jsonStr);
-      } else {
-        // If no code block, try to find raw JSON
-        const jsonMatch = text.match(/\{[^]*\}/);
-        if (jsonMatch) {
-          jsonStr = jsonMatch[0];
-          console.log('Extracted raw JSON:', jsonStr);
-        }
-      }
-      
-      try {
-        const parsed = JSON.parse(jsonStr);
-        return {
-          events: parsed.events || [],
-          rawResponse: text,
-        };
-      } catch (parseError) {
-        console.error('Error parsing JSON:', parseError);
+
+      // Parse the response for description and isDangerous (expects JSON in response text)
+      const parsed = parseJsonFromText<{ description: string; isDangerous: boolean }>(text);
+      if (!parsed) {
         throw new Error('Failed to parse API response');
       }
+
+      // Add timestamp locally (should be passed in as an argument in real usage)
+      const now = new Date();
+      const timestamp = `${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+      return {
+        events: [
+          {
+            description: parsed.description,
+            isDangerous: parsed.isDangerous,
+            timestamp,
+          },
+        ],
+        rawResponse: text,
+      };
     } catch (error) {
-      console.error('Error calling API:', error);
+      console.error('Error calling hosted model API:', error);
       throw error;
     }
   } catch (error) {

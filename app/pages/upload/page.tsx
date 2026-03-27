@@ -3,6 +3,7 @@
 import type React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import { Upload, Save, Clock, Film, AlertTriangle, ChevronRight } from 'lucide-react';
+
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,29 @@ import TimestampList from '@/components/timestamp-list';
 import type { Timestamp } from '@/app/types';
 import { detectEvents, type VideoEvent } from './actions';
 import Link from 'next/link';
+
+// --- New: EventLogCard for real-time event log ---
+function EventLogCard({ event }: { event: Timestamp }) {
+  return (
+    <div
+      className={`flex items-center gap-3 rounded-lg border p-3 mb-2 ${
+        event.isDangerous
+          ? 'border-red-700 bg-red-900/70 animate-pulse'
+          : 'border-green-700 bg-green-900/70'
+      }`}
+    >
+      {event.isDangerous ? (
+        <AlertTriangle className="h-6 w-6 text-red-400" />
+      ) : (
+        <Shield className="h-6 w-6 text-green-400" />
+      )}
+      <div className="flex flex-col">
+        <span className={`font-mono text-xs ${event.isDangerous ? 'text-red-200' : 'text-green-200'}`}>{event.timestamp}</span>
+        <span className={`text-sm font-medium ${event.isDangerous ? 'text-red-200' : 'text-green-200'}`}>{event.description}</span>
+      </div>
+    </div>
+  );
+}
 
 interface SavedVideo {
   id: string;
@@ -29,6 +53,10 @@ export default function UploadPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [timestamps, setTimestamps] = useState<Timestamp[]>([]);
+  // New: Real-time event log
+  const [eventLog, setEventLog] = useState<Timestamp[]>([]);
+  // New: For immediate last API response
+  const [lastApiResult, setLastApiResult] = useState<{ description: string; isDangerous: boolean } | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [videoName, setVideoName] = useState('');
   const [isDragging, setIsDragging] = useState(false);
@@ -135,7 +163,8 @@ export default function UploadPage() {
       const totalFrames = Math.floor(duration / interval);
       const newTimestamps: Timestamp[] = [];
 
-      // Process frames at regular intervals
+      // Process frames at regular intervals, ensuring each API call is resolved before the next
+
       for (let time = 0; time < duration; time += interval) {
         const progress = Math.floor((time / duration) * 100);
         setUploadProgress(progress);
@@ -144,18 +173,27 @@ export default function UploadPage() {
         const frame = await captureFrame(video, time);
         if (frame) {
           try {
+            // Print to terminal: API call start
+            console.log(`Sending frame at ${time}s to hosted model API...`);
+            console.log('Frame (base64, first 100 chars):', frame.slice(0, 100));
+
             const result = await detectEvents(frame);
             console.log('Frame analysis result:', result);
+
+            // Show the latest API result on screen immediately
             if (result.events && result.events.length > 0) {
-              result.events.forEach((event: VideoEvent) => {
-                const minutes = Math.floor(time / 60);
-                const seconds = Math.floor(time % 60);
-                newTimestamps.push({
-                  timestamp: `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
-                  description: event.description,
-                  isDangerous: event.isDangerous,
-                });
-              });
+              const event = result.events[0];
+              setLastApiResult({ description: event.description, isDangerous: event.isDangerous });
+              const minutes = Math.floor(time / 60);
+              const seconds = Math.floor(time % 60);
+              const timestamp = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+              const eventObj: Timestamp = {
+                timestamp,
+                description: event.description, // Already one-liner from API
+                isDangerous: event.isDangerous,
+              };
+              newTimestamps.push(eventObj);
+              setEventLog((prev) => [eventObj, ...prev].slice(0, 20)); // Show latest 20 events
             }
           } catch (error) {
             console.error('Error analyzing frame:', error);
@@ -165,6 +203,7 @@ export default function UploadPage() {
 
       console.log('Analysis complete, found timestamps:', newTimestamps);
       setTimestamps(newTimestamps);
+      // Optionally, set eventLog to all events at the end (if needed)
       setIsAnalyzing(false);
       setUploadProgress(100);
     } catch (error) {
@@ -223,6 +262,28 @@ export default function UploadPage() {
       </div>
 
       <div className="mx-auto w-full max-w-5xl">
+        {/* Immediate ML Model Response Log */}
+        {lastApiResult && (
+          <div className="mb-4 rounded-lg border border-zinc-800 bg-zinc-900/80 p-4 flex items-center gap-4">
+            <span className={`font-bold ${lastApiResult.isDangerous ? 'text-red-400' : 'text-green-400'}`}>
+              {lastApiResult.isDangerous ? 'DANGEROUS' : 'SAFE'}
+            </span>
+            <span className="text-white">{lastApiResult.description}</span>
+          </div>
+        )}
+        {/* Real-time Event Log Panel */}
+        {eventLog.length > 0 && (
+          <div className="mb-8 rounded-lg border border-zinc-800 bg-zinc-900/70 p-4">
+            <h2 className="mb-4 text-lg font-bold text-white flex items-center gap-2">
+              <AlertTriangle className="text-yellow-400" /> Event Log
+            </h2>
+            <div className="max-h-64 overflow-y-auto">
+              {eventLog.map((event, idx) => (
+                <EventLogCard key={idx} event={event} />
+              ))}
+            </div>
+          </div>
+        )}
         <div className="">
           <div className={`space-y-8 rounded-xl border border-zinc-800 bg-black p-6 shadow-2xl lg:col-span-${videoUrl ? '5' : '7'}`}>
             {!videoUrl && (
