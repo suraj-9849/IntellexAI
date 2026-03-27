@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState, useRef, useEffect } from 'react';
-import { Upload, Save, Clock, Film, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Upload, Save, Clock, Film, AlertTriangle, ChevronRight, Shield } from 'lucide-react';
 
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
