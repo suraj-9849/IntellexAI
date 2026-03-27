@@ -18,8 +18,19 @@ export async function detectEvents(
       throw new Error('No image data provided');
     }
 
-    const prompt = `Analyze this frame and determine if any dangerous or safety-relevant situation is occurring. Return a JSON object in this exact format:
+    const prompt = `Analyze this video frame and ONLY flag as dangerous if you see clear evidence of truly critical, violent, or criminal events. Mark isDangerous: true ONLY for these types of situations:
 
+- Physical violence (choking, punching, hitting, kicking, slapping, fighting)
+- Robbery, mugging, theft in progress
+- Use or visible presence of weapons (gun, knife, blood, shooting, stabbing)
+- Drug use or drug dealing
+- Any act that is life-threatening or criminal (e.g., assault, abduction, arson)
+
+- DO NOT mark isDangerous: true for minor arguments, running, falling, crowd, or non-violent actions.
+- If nothing critical is happening, return isDangerous: false.
+- Be strict: Only flag truly dangerous, violent, or criminal events.
+
+Return a JSON object in this exact format:
 {
   "events": [
     {

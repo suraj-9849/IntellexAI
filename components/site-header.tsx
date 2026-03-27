@@ -57,7 +57,7 @@ export default function SiteHeader() {
               'mx-auto flex max-w-2xl items-center justify-between md:rounded-xl md:border md:p-2.5 md:backdrop-blur'
             }
           >
-            <Link href={'/'}>
+            <Link href={'/protected'}>
               <div
                 className={'inline-flex items-center justify-center rounded-lg'}
               >
@@ -73,12 +73,6 @@ export default function SiteHeader() {
                   className={'text-white/70 pl-4 transition hover:text-white'}
                 >
                   Upload
-                </Link>
-                <Link
-                  href='/pages/realtime-stream'
-                  className={'text-white/70 transition hover:text-white'}
-                >
-                  Realtime
                 </Link>
                 <Link
                   href='/pages/saved-videos'

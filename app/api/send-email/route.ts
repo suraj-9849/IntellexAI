@@ -17,11 +17,11 @@ export async function POST(request: Request) {
     const resend = new Resend(apiKey);
 
     const { title, description } = await request.json();
-    console.log('Sending email to: surajlohit42@gmail.com');
+    console.log('Sending email to: aravindperumandla12@gmail.com');
 
     const { data, error } = await resend.emails.send({
       from: 'IntellexAI <onboarding@resend.dev>',
-      to: ['surajlohit42@gmail.com'],
+      to: ['aravindperumandla12@gmail.com'],
       subject: `[ALERT] ${title}`,
       html: `
         <h2>${title}</h2>
