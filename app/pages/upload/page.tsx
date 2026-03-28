@@ -637,7 +637,27 @@ export default function UploadPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [systemTime, setSystemTime] = useState('');
+  const [testEmailStatus, setTestEmailStatus] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Test email sender
+  const handleSendTestEmail = async () => {
+    setTestEmailStatus('Sending...');
+    try {
+      const res = await sendDangerEmail({
+        title: 'Test Email from Upload Page',
+        description: 'This is a test email to verify the email sending functionality.'
+      });
+      if (res && !res.error) {
+        setTestEmailStatus('Test email sent successfully!');
+      } else {
+        setTestEmailStatus('Failed to send test email.');
+      }
+    } catch (err) {
+      setTestEmailStatus('Error sending test email.');
+    }
+    setTimeout(() => setTestEmailStatus(null), 4000);
+  };
 
   // Live clock
   useEffect(() => {
@@ -670,7 +690,8 @@ export default function UploadPage() {
 
     setIsUploading(true);
     setUploadProgress(0);
-    setTimestamps([]);
+  if (!file) return;
+
     setEventLog([]);
     setLastApiResult(null);
 
@@ -740,6 +761,21 @@ export default function UploadPage() {
       console.error('Error:', error);
       setIsUploading(false);
       setIsAnalyzing(false);
+      let dangerEvents: Timestamp[] = [];
+
+      // Send summary email after detection
+      let summary = '';
+      if (dangerEvents.length > 0) {
+        summary = `<h3>Dangerous Events Detected in Video: ${file.name}</h3><ul>` +
+          dangerEvents.map(ev => `<li><b>${ev.timestamp}</b>: ${ev.description}</li>`).join('') +
+          '</ul>';
+      } else {
+        summary = `<h3>No dangerous events detected in video: ${file.name}</h3>`;
+      }
+      await sendDangerEmail({
+        title: `Video Analysis Report: ${file.name}`,
+        description: summary,
+      });
     }
   };
 
@@ -765,6 +801,16 @@ export default function UploadPage() {
   return (
     <>
       <style>{globalStyles}</style>
+
+      {/* Test Email Button */}
+      <div style={{ position: 'fixed', top: 16, right: 16, zIndex: 9999 }}>
+        <Button variant="outline" onClick={handleSendTestEmail}>
+          Send Test Email
+        </Button>
+        {testEmailStatus && (
+          <div style={{ marginTop: 8, color: 'var(--cyber)', fontWeight: 600 }}>{testEmailStatus}</div>
+        )}
+      </div>
 
       <div className="cyber-grid scanlines" style={{ color: 'var(--text-primary)', minHeight: '100vh' }}>
         {/* ── Top HUD Bar ── */}
